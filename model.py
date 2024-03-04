@@ -1,13 +1,23 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+"""
+Model Architecture.
+
+Modified from https://github.com/mulimani/Acoustic-Scene-Classification/
+These PANN's CNN Architectures are take from https://github.com/qiuqiangkong/audioset_tagging_cnn/tree/master:
+"""
+
+
+from torch import mean, max, sigmoid
+from torch.nn import Module, Linear, BatchNorm2d, Conv2d
+from torch.nn.init import xavier_uniform_
+from torch.nn.functional import dropout, relu_, max_pool2d, avg_pool2d
 import numpy as np
 
-# These PANN's CNN Architectures are take from https://github.com/qiuqiangkong/audioset_tagging_cnn/tree/master:
+import config
+
 
 def init_layer(layer):
     """Initialize a Linear or Convolutional layer. """
-    nn.init.xavier_uniform_(layer.weight)
+    xavier_uniform_(layer.weight)
 
     if hasattr(layer, 'bias'):
         if layer.bias is not None:
@@ -20,12 +30,12 @@ def init_bn(bn):
     bn.weight.data.fill_(1.)
 
 
-class ConvBlock(nn.Module):
+class ConvBlock(Module):
     def __init__(self, in_channels, out_channels):
 
         super(ConvBlock, self).__init__()
 
-        self.conv1 = nn.Conv2d(
+        self.conv1 = Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=(1, 3), 
@@ -33,7 +43,7 @@ class ConvBlock(nn.Module):
             padding=(0, 1), 
             bias=False
         )
-        self.conv2 = nn.Conv2d(
+        self.conv2 = Conv2d(
             in_channels=out_channels,
             out_channels=out_channels,
             kernel_size=(1, 3), 
@@ -41,8 +51,8 @@ class ConvBlock(nn.Module):
             padding=(0, 1), 
             bias=False
         )
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.bn1 = BatchNorm2d(out_channels)
+        self.bn2 = BatchNorm2d(out_channels)
 
         self.init_weight()
 
@@ -55,23 +65,23 @@ class ConvBlock(nn.Module):
     def forward(self, input, pool_size=(2, 2), pool_type='avg'):
 
         x = input
-        x = F.relu_(self.bn1(self.conv1(x)))
-        x = F.relu_(self.bn2(self.conv2(x)))
+        x = relu_(self.bn1(self.conv1(x)))
+        x = relu_(self.bn2(self.conv2(x)))
 
         if pool_type == 'max':
-            x = F.max_pool2d(x, kernel_size=pool_size)
+            x = max_pool2d(x, kernel_size=pool_size)
         elif pool_type == 'avg':
-            x = F.avg_pool2d(x, kernel_size=pool_size)
+            x = avg_pool2d(x, kernel_size=pool_size)
         elif pool_type == 'avg+max':
-            x1 = F.avg_pool2d(x, kernel_size=pool_size)
-            x2 = F.max_pool2d(x, kernel_size=pool_size)
+            x1 = avg_pool2d(x, kernel_size=pool_size)
+            x2 = max_pool2d(x, kernel_size=pool_size)
             x = x1 + x2
         else:
             raise Exception('Incorrect argument!')
         return x
 
 
-class Cnn14(nn.Module):
+class Cnn14(Module):
     def __init__(
             self, 
             sample_rate, 
@@ -92,7 +102,7 @@ class Cnn14(nn.Module):
         amin = 1e-10
         top_db = None
 
-        self.bn0 = nn.BatchNorm2d(64)
+        self.bn0 = BatchNorm2d(config.nb_mel_bands)
 
         self.conv_block1 = ConvBlock(in_channels=1, out_channels=64)
         self.conv_block2 = ConvBlock(in_channels=64, out_channels=128)
@@ -101,8 +111,8 @@ class Cnn14(nn.Module):
         self.conv_block5 = ConvBlock(in_channels=512, out_channels=1024)
         self.conv_block6 = ConvBlock(in_channels=1024, out_channels=2048)
 
-        self.fc1 = nn.Linear(2048, 2048, bias=True)
-        self.fc_audioset = nn.Linear(2048, classes_num, bias=True)
+        self.fc1 = Linear(2048, 2048, bias=True)
+        self.fc_audioset = Linear(2048, classes_num, bias=True)
 
         self.init_weight()
 
@@ -116,38 +126,39 @@ class Cnn14(nn.Module):
         Input: (batch_size, data_length)"""
 
         x = input  # (batch_size, 1, time_steps, freq_bins)
-        print(x.shape) # TODO this is missing the one, due to batching
+        x = input.unsqueeze(1)
+        #print(x.shape) # TODO this was missing expected dim due to data
 
         x = x.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
 
         x = self.conv_block1(x, pool_size=(2, 2), pool_type='avg')
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = dropout(x, p=0.2, training=self.training)
 
         x = self.conv_block2(x, pool_size=(2, 2), pool_type='avg')
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = dropout(x, p=0.2, training=self.training)
 
         x = self.conv_block3(x, pool_size=(2, 2), pool_type='avg')
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = dropout(x, p=0.2, training=self.training)
 
         x = self.conv_block4(x, pool_size=(2, 2), pool_type='avg')
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = dropout(x, p=0.2, training=self.training)
 
         x = self.conv_block5(x, pool_size=(2, 2), pool_type='avg')
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = dropout(x, p=0.2, training=self.training)
 
         x = self.conv_block6(x, pool_size=(1, 1), pool_type='avg')
-        x = F.dropout(x, p=0.2, training=self.training)
-        x = torch.mean(x, dim=3)
+        x = dropout(x, p=0.2, training=self.training)
+        x = mean(x, dim=3)
 
-        (x1, _) = torch.max(x, dim=2)
-        x2 = torch.mean(x, dim=2)
+        (x1, _) = max(x, dim=2)
+        x2 = mean(x, dim=2)
         x = x1 + x2
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = F.relu_(self.fc1(x))
-        embedding = F.dropout(x, p=0.5, training=self.training)
-        clipwise_output = torch.sigmoid(self.fc_audioset(x))
+        x = dropout(x, p=0.5, training=self.training)
+        x = relu_(self.fc1(x))
+        embedding = dropout(x, p=0.5, training=self.training)
+        clipwise_output = sigmoid(self.fc_audioset(x))
 
         output_dict = {
             'clipwise_output': clipwise_output, 

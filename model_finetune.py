@@ -1,29 +1,27 @@
-import os
-import sys
+"""
+Loading a pretrained model.
+
+Modified from https://github.com/mulimani/Acoustic-Scene-Classification/
+These PANN's CNN Architectures are take from https://github.com/qiuqiangkong/audioset_tagging_cnn/tree/master:
+"""
 
 import torch
-torch.backends.cudnn.benchmark = True
 torch.manual_seed(0)
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torch.utils.data
+from torch.nn import Linear , Module
 
 from model import Cnn14, init_layer
 
-# These PANN's CNN Architectures are take from https://github.com/qiuqiangkong/audioset_tagging_cnn/tree/master:
 
-
-class Transfer_Cnn14(nn.Module):
+class Transfer_Cnn14(Module):
     def __init__(
             self, 
-            sample_rate, 
-            window_size, 
+            sample_rate,
+            window_size,
             hop_size, 
-            mel_bins, 
+            mel_bins,
             fmin,
-            fmax, 
-            classes_num, 
+            fmax,
+            classes_num,
             freeze_base
         ):
         """
@@ -32,7 +30,7 @@ class Transfer_Cnn14(nn.Module):
 
         super(Transfer_Cnn14, self).__init__()
 
-        audioset_classes_num = 527
+        #audioset_classes_num = 527
 
         self.base = Cnn14(
             sample_rate, 
@@ -41,11 +39,11 @@ class Transfer_Cnn14(nn.Module):
             mel_bins, 
             fmin,
             fmax, 
-            audioset_classes_num
+            classes_num #audioset_classes_num
         )
 
         # Transfer to another task layer
-        self.fc_transfer = nn.Linear(2048, classes_num, bias=True)
+        self.fc_transfer = Linear(2048, classes_num, bias=True)
 
         if freeze_base:
             # Freeze AudioSet pretrained layers
@@ -68,7 +66,9 @@ class Transfer_Cnn14(nn.Module):
         model_dict = self.base.state_dict()
 
         # 1. filter out unnecessary keys
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        pretrained_dict = {
+            k: v for k, v in pretrained_dict.items() if k in model_dict
+        }
         
         # 2. overwrite entries in the existing state dict
         model_dict.update(pretrained_dict)

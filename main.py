@@ -5,7 +5,6 @@ Modified from https://github.com/mulimani/Sound-Event-Detection
 """
 
 import torch
-torch.backends.cudnn.benchmark = True
 from torch.utils.data import DataLoader
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import Adam
@@ -33,6 +32,7 @@ CLASS_LABELS_DICT = {
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
+    torch.backends.cudnn.benchmark = True
 else:
     device = torch.device('cpu')
 
@@ -137,15 +137,14 @@ def evaluate(model, test_loader):
         preds = torch.sigmoid(model(mel))
 
         # append predictions and targets
-        preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
+        preds_list.extend(preds.cpu().detach().numpy()) #preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
         target_list.extend(target.view(-1, target.size(2)).cpu().detach().numpy())
 
+    # display evaluation metrics
     segment_based_metrics = sed_eval.sound_event.SegmentBasedMetrics(
         event_label_list=list(CLASS_LABELS_DICT.keys()),
         time_resolution=1.0
     )
-
-    # display evaluation metrics
     output, test_ER, test_F1, class_wise_metrics = get_SED_results(
         np.array(target_list), 
         np.array(preds_list),
@@ -175,10 +174,15 @@ if __name__ == '__main__':
         freeze_base=False
     )
     model = model.to(device)
-    model.load_from_pretrain(pretrained_checkpoint_path=config.pretrained_checkpoint_path)
+    model.load_from_pretrain(
+        pretrained_checkpoint_path=config.pretrained_checkpoint_path
+    )
 
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
-    train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
+    # train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
+
+    model.train()
+    
     evaluate(model, test_loader)
