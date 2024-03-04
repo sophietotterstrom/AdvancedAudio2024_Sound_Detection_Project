@@ -4,8 +4,6 @@ Modified from https://github.com/mulimani/Sound-Event-Detection
 
 """
 
-import argparse
-
 import torch
 torch.backends.cudnn.benchmark = True
 import torch.nn as nn
@@ -35,18 +33,6 @@ if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
-
-
-def parse_option():
-    parser = argparse.ArgumentParser('arguements for dataset and training')
-
-    parser.add_argument('--learning-rate', type=float, default=0.0001, help='learning rate for training')
-    parser.add_argument('--epoch', type=int, default=100, help='total number of training epochs')
-    parser.add_argument('--batch-size', type=int, default=32, help='mini bath-size')
-    parser.add_argument('--num-workers', type=int, default=0, help='numbers parallel workers to use')
-    parser.add_argument('--check-point', type=int, default=50, help='check point')
-    args = parser.parse_args()
-    return args
 
 
 def load_data():
@@ -149,7 +135,6 @@ def evaluate(model, test_loader):
 
 
 if __name__ == '__main__':
-    args = parse_option()
 
     np.random.seed(1900)
     model = model.CRNN(classes_num=6).to(device)
@@ -157,5 +142,5 @@ if __name__ == '__main__':
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
-    train(model, train_loader, epoch=args.epoch, check_point=args.check_point)
+    train(model, train_loader, epoch=config.epochs, check_point=config.check_point)
     evaluate(model, test_loader)
