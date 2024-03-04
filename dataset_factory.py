@@ -92,9 +92,6 @@ class MelData(Dataset):
         amin = 1e-10
         top_db = None
 
-        self.mel_tensor, self.label_tensor = None, None
-        self.mel_list, self.label_list = [], []
-
         self.melspec = MelSpectrogram(
             sample_rate=self.sample_rate,
             n_fft=self.n_fft,
@@ -104,10 +101,16 @@ class MelData(Dataset):
             f_max=self.fmax
         )
 
+        self.mel_tensor, self.label_tensor = None, None
+        self.mel_list, self.label_list = [], []
+        self.load_data()
+
+    def load_data(self):
+
         meta = os.path.join(self.root + 'meta.txt')
         meta_dict = load_metadata(meta, self.class_labels)
 
-        files_path = os.path.join(root + 'audio/' + 'street')
+        files_path = os.path.join(self.root + 'audio/' + 'street')
         for audio_file in os.listdir(files_path):
             audio_path = os.path.join(files_path + audio_file)
 
