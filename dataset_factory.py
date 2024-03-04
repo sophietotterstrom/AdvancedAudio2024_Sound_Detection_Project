@@ -64,7 +64,9 @@ class MelData(Dataset):
             sample_rate=32000, 
             n_mels=64, 
             n_fft=1024, 
-            hop_length=320
+            hop_length=320,
+            fmin=20,
+            fmax=14000
         ):
 
         self.root = root
@@ -83,8 +85,8 @@ class MelData(Dataset):
 
         # Mel parameters (the same as librosa.feature.melspectrogram)
         self.n_mels = n_mels
-        self.fmin = 20
-        self.fmax = 14000
+        self.fmin = fmin
+        self.fmax = fmax
 
         # Power to db parameters (the same as default settings of librosa.power_to_db
         ref = 1.0
@@ -103,6 +105,7 @@ class MelData(Dataset):
         self.mel_tensor, self.label_tensor = None, None
         self.mel_list, self.label_list = [], []
         self.extract_data()
+
 
     def extract_data(self):
 

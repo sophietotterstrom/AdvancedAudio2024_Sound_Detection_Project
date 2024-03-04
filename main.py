@@ -16,6 +16,7 @@ import config
 import sed_eval
 from dcase_evaluate import get_SED_results
 import model
+from model_finetune import Transfer_Cnn14
 from utils import preprocess_data
 from dataset_factory import BatchData, MelData
 
@@ -162,10 +163,22 @@ def evaluate(model, test_loader):
 if __name__ == '__main__':
 
     np.random.seed(1900)
-    model = model.CRNN(classes_num=6).to(device)
+
+    model = Transfer_Cnn14(
+        sample_rate=config.sr, 
+        window_size=config.win_len, 
+        hop_size=config.hop_len,
+        mel_bins=config.nb_mel_bands,
+        fmin=config.fmin,
+        fmax=config.fmax, 
+        classes_num=config.num_classes, 
+        freeze_base=False
+    )
+    model = model.to(device)
+    model.load_from_pretrain(pretrained_checkpoint_path=config.pretrained_checkpoint_path)
 
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
-    train(model, train_loader, epoch=config.epochs, check_point=config.check_point)
+    train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
     evaluate(model, test_loader)
