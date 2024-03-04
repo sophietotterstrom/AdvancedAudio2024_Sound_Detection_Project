@@ -109,7 +109,7 @@ class MelData(Dataset):
         meta = os.path.join(self.root + 'meta.txt')
         meta_dict = load_metadata(meta, self.class_labels)
 
-        files_path = os.path.join(self.root + 'audio/' + 'street')
+        files_path = os.path.join(self.root + 'audio/' + 'street/')
         for audio_file in os.listdir(files_path):
             audio_path = os.path.join(files_path + audio_file)
 

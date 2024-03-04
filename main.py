@@ -20,6 +20,7 @@ import model
 from utils import preprocess_data
 from dataset_factory import BatchData, MelData
 
+
 # Class labels of DCASE SED 2017 task - Events from street scene
 CLASS_LABELS_DICT = {
     'brakes squeaking': 0,
@@ -153,6 +154,7 @@ if __name__ == '__main__':
     np.random.seed(1900)
     model = model.CRNN(classes_num=6).to(device)
 
+    # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
     train(model, train_loader, epoch=args.epoch, check_point=args.check_point)
