@@ -66,15 +66,15 @@ def load_data():
 
     train_loader = DataLoader(
         BatchData(X_dev, Y_dev), 
-        batch_size=args.batch_size, 
+        batch_size=config.batch_size, 
         shuffle=True,
-        num_workers=args.num_workers
+        num_workers=config.num_workers
     )
     test_loader = DataLoader(
         BatchData(X_eval, Y_eval), 
-        batch_size=args.batch_size, 
+        batch_size=config.batch_size, 
         shuffle=False,
-        num_workers=args.num_workers
+        num_workers=config.num_workers
     )
 
     return train_loader, test_loader
@@ -84,7 +84,7 @@ def train(model, train_loader, epoch, check_point):
     step = 0
     model.to(device)
     criteria = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=config.lr)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epoch, eta_min=0.001)
 
     for epoch_idx in range(1, epoch + 1):
@@ -127,7 +127,7 @@ def evaluate(model, test_loader):
     )
 
     output, test_ER, test_F1, class_wise_metrics = get_SED_results(np.array(target_list), np.array(preds_list),
-                                                                   list(__class_labels_dict.keys()), segment_based_metrics,
+                                                                   list(CLASS_LABELS_DICT.keys()), segment_based_metrics,
                                                                    threshold=0.5,
                                                                    hop_size=config.hop_len, sample_rate=config.sr)
     print(output)
