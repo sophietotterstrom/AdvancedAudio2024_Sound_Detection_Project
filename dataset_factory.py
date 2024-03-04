@@ -50,7 +50,6 @@ def load_metadata(meta_file, class_labels):
             float(words[3]), 
             class_labels[words[-1]]
         ])
-
     return meta_dict
 
 
@@ -103,9 +102,9 @@ class MelData(Dataset):
 
         self.mel_tensor, self.label_tensor = None, None
         self.mel_list, self.label_list = [], []
-        self.load_data()
+        self.extract_data()
 
-    def load_data(self):
+    def extract_data(self):
 
         meta = os.path.join(self.root + 'meta.txt')
         meta_dict = load_metadata(meta, self.class_labels)
