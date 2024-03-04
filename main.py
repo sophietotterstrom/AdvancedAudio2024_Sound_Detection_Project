@@ -1,14 +1,15 @@
 """
+Main for loading the data, and training and evaluating the model.
 
 Modified from https://github.com/mulimani/Sound-Event-Detection
-
 """
 
 import torch
 torch.backends.cudnn.benchmark = True
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.nn import BCEWithLogitsLoss
+from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR
 import numpy as np
 
 import config
@@ -80,34 +81,47 @@ def load_data():
     return train_loader, test_loader
 
 
-def train(model, train_loader, epoch, check_point):
+def train(model, train_loader, epochs, check_point):
     step = 0
     model.to(device)
-    criteria = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=config.lr)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epoch, eta_min=0.001)
 
-    for epoch_idx in range(1, epoch + 1):
+    criteria = BCEWithLogitsLoss()
+    optimizer = Adam(model.parameters(), lr=config.lr)
+    scheduler = CosineAnnealingLR(optimizer, T_max=epochs, eta_min=0.001)
+
+    for epoch_idx in range(1, epochs + 1):
         model.train()
         sum_loss = 0
+
         for batch_idx, (mel, target) in enumerate(train_loader):
             optimizer.zero_grad()
+
+            # unpack batch and transfer to device
             mel, target = mel.to(device), target.to(device).float()
-            logits = model(mel)
-            loss = criteria(logits, target)
+
+            # fetch predictions
+            preds = model(mel)
+
+            loss = criteria(preds, target)
             sum_loss += loss.item()
+
+            # backpropagate and update weights
             loss.backward()
             optimizer.step()
+
             step += 1
 
-            if (batch_idx + 1) % check_point == 0 or (batch_idx + 1) == len(train_loader):
-                print('==>>> epoch: {}, batch index: {}, step: {}, train loss: {:.3f}'.
-                      format(epoch_idx, batch_idx + 1, step, sum_loss / (batch_idx + 1)))
-
+            if (batch_idx + 1) % check_point == 0 or (batch_idx + 1) == len(train_loader):                
+                print(f'Epoch: {epoch_idx:03d} | '
+                      f'Batch: {batch_idx + 1:03d} | '
+                      f'Step: {step:06d} | '
+                      f'Train Loss {sum_loss / (batch_idx + 1):7.4f}')
+        
         scheduler.step()
 
 
 def evaluate(model, test_loader):
+
     model.to(device)
     model.eval()
 
@@ -115,9 +129,13 @@ def evaluate(model, test_loader):
     target_list = []
 
     for batch_idx, (mel, target) in enumerate(test_loader):
+        # unpack batch and transfer to device
         mel, target = mel.to(device), target.to(device).float()
+
+        # add non-linearity to the predictions
         preds = torch.sigmoid(model(mel))
 
+        # append predictions and targets
         preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
         target_list.extend(target.view(-1, target.size(2)).cpu().detach().numpy())
 
@@ -126,12 +144,19 @@ def evaluate(model, test_loader):
         time_resolution=1.0
     )
 
-    output, test_ER, test_F1, class_wise_metrics = get_SED_results(np.array(target_list), np.array(preds_list),
-                                                                   list(CLASS_LABELS_DICT.keys()), segment_based_metrics,
-                                                                   threshold=0.5,
-                                                                   hop_size=config.hop_len, sample_rate=config.sr)
+    # display evaluation metrics
+    output, test_ER, test_F1, class_wise_metrics = get_SED_results(
+        np.array(target_list), 
+        np.array(preds_list),
+        list(CLASS_LABELS_DICT.keys()), 
+        segment_based_metrics,
+        threshold=0.5,
+        hop_size=config.hop_len, 
+        sample_rate=config.sr
+    )
     print(output)
-    print('F1: {:.3f}, ER: {:.3f}'.format(test_F1, test_ER))
+    print(f'F1: {test_F1:.3f} | '
+          f'ER: {test_ER:.3f}')
 
 
 if __name__ == '__main__':
