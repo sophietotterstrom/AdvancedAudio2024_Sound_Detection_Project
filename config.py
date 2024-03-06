@@ -28,7 +28,8 @@ nb_channels = 1
 # Dataset params
 #################################
 development_dir = '../dataset/SED_2017_street/TUT-sound-events-2017-development/'
-evaluation_dir = '../dataset/SED_2017_street/TUT-sound-events-2017-evaluation/'
+#evaluation_dir = '../dataset/SED_2017_street/TUT-sound-events-2017-evaluation/'
+evaluation_dir = '../dataset/MyEvaluationSet/'
 num_classes = 6
 
 #################################

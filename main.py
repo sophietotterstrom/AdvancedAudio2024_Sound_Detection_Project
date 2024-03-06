@@ -181,8 +181,8 @@ if __name__ == '__main__':
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
+    # model.train()
     # train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
-
-    model.train()
     
+    model.eval()
     evaluate(model, test_loader)
