@@ -30,8 +30,6 @@ class Transfer_Cnn14_DecisionLevelMax(Module):
 
         super(Transfer_Cnn14_DecisionLevelMax, self).__init__()
 
-        #audioset_classes_num = 527
-
         self.base =  Cnn14_DecisionLevelMax(
             sample_rate, 
             window_size, 
@@ -39,7 +37,7 @@ class Transfer_Cnn14_DecisionLevelMax(Module):
             mel_bins, 
             fmin,
             fmax, 
-            classes_num #audioset_classes_num
+            classes_num
         )
 
         # Transfer to another task layer
@@ -85,10 +83,6 @@ class Transfer_Cnn14_DecisionLevelMax(Module):
 
         framewise = output_dict['framewise_output']
         clipwise = output_dict['clipwise_output']
-        
-        embedding = output_dict['embedding']
-        #embedding = output_dict['embedding']
-        #embedding_clipwise_output = self.fc_transfer(embedding)
 
         return framewise
 
