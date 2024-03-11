@@ -174,9 +174,9 @@ def evaluate(model, test_loader):
         target = target.to(device).float()
 
         preds = model(mel)
-        
+        preds = torch.nn.functional.threshold(preds, 0.5, 0, 1)
+
         # append predictions and targets
-        # preds_list.extend(preds.cpu().detach().numpy())
         preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
         target_list.extend(target.view(-1, target.size(2)).cpu().detach().numpy())
 
@@ -195,8 +195,7 @@ def evaluate(model, test_loader):
         sample_rate=config.sr
     )
     print(output)
-    print(f'F1: {test_F1:.3f} | '
-          f'ER: {test_ER:.3f}')
+    print(f'F1: {test_F1:.3f} | ER: {test_ER:.3f}')
 
 
 ########################################################################################
@@ -317,7 +316,7 @@ def main():
     ############# "CLI" ARGS #############
     pretrained = True
     resume_training = False
-    plot = False
+    plot = True
     #######################################
 
     np.random.seed(1900)

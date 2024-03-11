@@ -39,7 +39,7 @@ num_classes = 6
 pretrained_checkpoint_path = '../Cnn14_DecisionLevelMax_mAP=0.385.pth'
 
 lr = 0.0001         # learning rate for training
-epochs = 1        # total number of training epochs
+epochs = 30        # total number of training epochs
 batch_size = 32     # mini bath-size
 num_workers = 0     # numbers parallel workers to use
 check_point = 50    # check point

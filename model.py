@@ -159,7 +159,7 @@ class Cnn14_DecisionLevelMax(Module):
         x = x.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
-        
+
         if self.training:
             x = self.spec_augmenter(x)
 
