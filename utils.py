@@ -4,7 +4,11 @@ Utility functions associated with the project
 Copied from https://github.com/mulimani/Sound-Event-Detection
 """
 
-from torch import split
+from torch import split, cat
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 
 
 def drop(_X, _Y, _seq_len):
@@ -37,3 +41,55 @@ def preprocess_data(_X, _Y, _X_test, _Y_test, _seq_len):
     _X_test, _Y_test = drop(_X_test, _Y_test, _seq_len)
 
     return _X, _Y, _X_test, _Y_test
+
+## CNN14 DecisionLevelMax
+def do_mixup(x, mixup_lambda):
+    """Mixup x of even indexes (0, 2, 4, ...) with x of odd indexes 
+    (1, 3, 5, ...).
+
+    Args:
+      x: (batch_size * 2, ...)
+      mixup_lambda: (batch_size * 2,)
+
+    Returns:
+      out: (batch_size, ...)
+    """
+    out = (x[0 :: 2].transpose(0, -1) * mixup_lambda[0 :: 2] + \
+        x[1 :: 2].transpose(0, -1) * mixup_lambda[1 :: 2]).transpose(0, -1)
+    return out
+
+def interpolate(x, ratio):
+    """Interpolate data in time domain. This is used to compensate the 
+    resolution reduction in downsampling of a CNN.
+    
+    Args:
+      x: (batch_size, time_steps, classes_num)
+      ratio: int, ratio to interpolate
+
+    Returns:
+      upsampled: (batch_size, time_steps * ratio, classes_num)
+    """
+    (batch_size, time_steps, classes_num) = x.shape
+    upsampled = x[:, :, None, :].repeat(1, 1, ratio, 1)
+    upsampled = upsampled.reshape(batch_size, time_steps * ratio, classes_num)
+    return upsampled
+
+
+def pad_framewise_output(framewise_output, frames_num):
+    """Pad framewise_output to the same length as input frames. The pad value 
+    is the same as the value of the last frame.
+
+    Args:
+      framewise_output: (batch_size, frames_num, classes_num)
+      frames_num: int, number of frames to pad
+
+    Outputs:
+      output: (batch_size, frames_num, classes_num)
+    """
+    pad = framewise_output[:, -1 :, :].repeat(1, frames_num - framewise_output.shape[1], 1)
+    """tensor for padding"""
+
+    output = cat((framewise_output, pad), dim=1)
+    """(batch_size, frames_num, classes_num)"""
+
+    return output

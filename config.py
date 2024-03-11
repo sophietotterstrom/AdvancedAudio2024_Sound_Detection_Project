@@ -35,7 +35,8 @@ num_classes = 6
 #################################
 # Model parameters
 #################################
-pretrained_checkpoint_path = '../Cnn14_mAP=0.431.pth'
+#pretrained_checkpoint_path = '../Cnn14_mAP=0.431.pth'
+pretrained_checkpoint_path = '../Cnn14_DecisionLevelMax_mAP=0.385.pth'
 
 lr = 0.0001         # learning rate for training
 epochs = 100        # total number of training epochs

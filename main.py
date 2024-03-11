@@ -15,7 +15,7 @@ import config
 import sed_eval
 from dcase_evaluate import get_SED_results
 import model
-from model_finetune import Transfer_Cnn14
+from model_finetune import Transfer_Cnn14, Transfer_Cnn14_DecisionLevelMax
 from utils import preprocess_data
 from dataset_factory import BatchData, MelData
 
@@ -138,8 +138,8 @@ def evaluate(model, test_loader):
         preds = torch.sigmoid(model(mel))
         
         # append predictions and targets
-        preds_list.extend(preds.cpu().detach().numpy())
-        #preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
+        #preds_list.extend(preds.cpu().detach().numpy())
+        preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
         target_list.extend(target.view(-1, target.size(2)).cpu().detach().numpy())
 
     # display evaluation metrics
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     np.random.seed(1900)
 
-    model = Transfer_Cnn14(
+    model = Transfer_Cnn14_DecisionLevelMax(
         sample_rate=config.sr, 
         window_size=config.win_len, 
         hop_size=config.hop_len,
