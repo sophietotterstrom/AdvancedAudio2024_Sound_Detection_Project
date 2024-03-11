@@ -12,7 +12,8 @@ from dcase_util.containers import metadata
 
 def find_contiguous_regions(activity_array):
     '''
-    Taken from dcase_util https://dcase-repo.github.io/dcase_util/index.html, written by Toni Heittola et al.
+    Taken from dcase_util https://dcase-repo.github.io/dcase_util/index.html, 
+    written by Toni Heittola et al.
     '''
     # Find the changes in the activity_array
     change_indices = np.logical_xor(activity_array[1:], activity_array[:-1]).nonzero()[0]
@@ -78,3 +79,48 @@ def get_SED_results(y_true, y_pred, labels, segment_based_metrics, threshold=0.5
     class_wise_metrics = segment_based_metrics.results_class_wise_metrics()
     #segment_based_metrics.reset()
     return output, test_ER, test_F1, class_wise_metrics
+
+
+########################################################################################
+# Mikhail's code from https://github.com/msilaev/Sound-Event-Detection-course-project/
+# to ensure plots for the report match each other
+########################################################################################
+def process_event_my(class_labels, frame_probabilities, threshold, hop_length_seconds, file_name):
+    results = []
+    events_dic = {}
+    for event_id, event_label in enumerate(class_labels):
+        # Binarization
+        event_activity = frame_probabilities[event_id, :] > threshold
+
+        # Convert active frames into segments and translate frame indices into time stamps
+        event_segments = find_contiguous_regions(event_activity) * hop_length_seconds
+
+        # Store events
+        for event in event_segments:
+
+            events_dic.update({tuple(event): event_label} )
+            results.append(
+                metadata.MetaDataItem(
+                    {
+                        'event_onset': event[0],
+                        'event_offset': event[1],
+                        'event_label': event_label
+                    }
+                )
+            )
+
+    sorted_events_dic_keys = sorted(events_dic.keys(), key=lambda item: item[0], reverse=False)
+    sorted_events_dic_values = [events_dic[key] for key in sorted_events_dic_keys]
+
+    processed_sorted_events_dic_keys = []
+    processed_sorted_events_dic_values = []
+    minimum_event_length = 0.1
+
+    with open(file_name, "w") as file:
+
+        for ind, x in enumerate(sorted_events_dic_keys) :
+            if (x[1]-x[0] > minimum_event_length ):
+                processed_sorted_events_dic_keys.append(x)
+                processed_sorted_events_dic_values.append(sorted_events_dic_values[ind])
+               # print(x, sorted_events_dic_values[ind])
+                file.write(f"{x[0]},{x[1]},{sorted_events_dic_values[ind]}\n")

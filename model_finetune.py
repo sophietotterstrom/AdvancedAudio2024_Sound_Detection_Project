@@ -85,8 +85,8 @@ class Transfer_Cnn14_DecisionLevelMax(Module):
 
         framewise = output_dict['framewise_output']
         clipwise = output_dict['clipwise_output']
-        embedding = output_dict['embedding']
         
+        embedding = output_dict['embedding']
         #embedding = output_dict['embedding']
         #embedding_clipwise_output = self.fc_transfer(embedding)
 

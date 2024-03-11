@@ -2,7 +2,7 @@
 Model Architecture.
 
 Modified from https://github.com/mulimani/Acoustic-Scene-Classification/
-These PANN's CNN Architectures are take from https://github.com/qiuqiangkong/audioset_tagging_cnn/tree/master:
+These PANN's CNN Architectures are take from https://github.com/qiuqiangkong/audioset_tagging_cnn/tree/master
 """
 
 
@@ -214,7 +214,7 @@ class Cnn14_DecisionLevelMax(Module):
         ref = 1.0
         amin = 1e-10
         top_db = None
-        
+
         self.interpolate_ratio = 32     # Downsampled ratio
 
         """

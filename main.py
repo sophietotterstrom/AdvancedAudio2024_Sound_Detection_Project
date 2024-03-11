@@ -4,6 +4,8 @@ Main for loading the data, and training and evaluating the model.
 Modified from https://github.com/mulimani/Sound-Event-Detection
 """
 
+import sys
+
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import BCEWithLogitsLoss
@@ -13,7 +15,7 @@ import numpy as np
 
 import config
 import sed_eval
-from dcase_evaluate import get_SED_results
+from dcase_evaluate import get_SED_results, process_event_my
 import model
 from model_finetune import Transfer_Cnn14, Transfer_Cnn14_DecisionLevelMax
 from utils import preprocess_data
@@ -37,6 +39,9 @@ else:
     device = torch.device('cpu')
 
 
+##############################################################################
+################################ DATA LOADING ################################
+##############################################################################
 def load_data():
 
     # Development and evaluation sets paths
@@ -81,7 +86,37 @@ def load_data():
 
     return train_loader, test_loader
 
+def load_plot_data():
+    # Development and evaluation sets paths
+    plot_dir = '../dataset/PlotSet/'
 
+    plot_data = MelData(
+        plot_dir, 
+        CLASS_LABELS_DICT,
+        sample_rate=config.sr,
+        n_mels=config.nb_mel_bands,
+        n_fft=config.nfft, 
+        hop_length=config.hop_len
+    )
+
+    X_dev, Y_dev = plot_data.mel_tensor, plot_data.label_tensor
+    X_eval, Y_eval = plot_data.mel_tensor, plot_data.label_tensor
+
+    X_dev, Y_dev, X_eval, Y_eval = preprocess_data(X_dev, Y_dev, X_eval, Y_eval, config.seq_length)
+    # X_dev, X_eval = torch.from_numpy(X_dev).float(), torch.from_numpy(X_eval).float()
+
+    plot_loader = DataLoader(
+        BatchData(X_dev, Y_dev), 
+        batch_size=config.batch_size, 
+        shuffle=True,
+        num_workers=config.num_workers
+    )
+    return plot_loader
+
+
+##############################################################################
+################################ MODEL FUNCTS ################################
+##############################################################################
 def train(model, train_loader, epochs, check_point):
     step = 0
     model.to(device)
@@ -121,7 +156,6 @@ def train(model, train_loader, epochs, check_point):
         
         scheduler.step()
 
-
 def evaluate(model, test_loader):
 
     model.to(device)
@@ -134,11 +168,10 @@ def evaluate(model, test_loader):
         # unpack batch and transfer to device
         mel, target = mel.to(device), target.to(device).float()
 
-        # add non-linearity to the predictions
-        preds = torch.sigmoid(model(mel))
+        preds = model(mel)
         
         # append predictions and targets
-        #preds_list.extend(preds.cpu().detach().numpy())
+        # preds_list.extend(preds.cpu().detach().numpy())
         preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
         target_list.extend(target.view(-1, target.size(2)).cpu().detach().numpy())
 
@@ -161,7 +194,121 @@ def evaluate(model, test_loader):
           f'ER: {test_ER:.3f}')
 
 
-if __name__ == '__main__':
+########################################################################################
+# Mikhail's code from https://github.com/msilaev/Sound-Event-Detection-course-project/
+# to ensure plots for the report match each other
+########################################################################################
+
+check_time_stamp_folder = "../dataset/CheckTimeStamps/"
+time_stamp_predict_file = "time_stamp_predict.txt"
+time_stamp_label_file = "time_stamp_label.txt"
+
+def predict_time_stamps(model, usage_loader, check_time_stamp_folder):
+    model.to(device)
+    model.eval()
+
+    preds_list = []
+    target_list = []
+
+    for batch_idx, (mel, target) in enumerate(usage_loader):
+        mel, target = mel.to(device), target.to(device).float()
+        preds = model(mel)
+
+        preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
+        target_list.extend(target.view(-1, preds.size(2)).cpu().detach().numpy())
+
+    hop_length_seconds = config.hop_len/config.sr
+    threshold = 0.5
+
+    # this is needed to generate  time stamps of predicted events
+    process_event_my(list(CLASS_LABELS_DICT.keys()),
+                  np.array(preds_list).T,
+                  threshold, hop_length_seconds, time_stamp_predict_file)
+
+    process_event_my(list(CLASS_LABELS_DICT.keys()),
+                     np.array(target_list).T,
+                     threshold, hop_length_seconds, time_stamp_label_file)
+
+
+def plot_sound_events():
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    import matplotlib.lines as mlines
+
+    time_stamp_predict_file = "time_stamp_predict.txt"
+    time_stamp_label_file = "time_stamp_label.txt"
+
+    # Create a figure and a single subplot
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Colors for different classes
+    class_colors_dict = {
+        'brakes squeaking': '#E41A1C',  # Red
+        'car': '#377EB8',  # Blue
+        'children': '#4DAF4A',  # Green
+        'large vehicle': '#984EA3',  # Purple
+        'people speaking': '#FF7F00',  # Orange
+        'people walking': '#FFFF33'  # Yellow
+    }
+
+    column_names = ["start_time", "end_time", "class"]
+    # Load the dataset
+    data = pd.read_csv(time_stamp_predict_file, header=None, names=column_names)
+
+    data_annotation = pd.read_csv(time_stamp_label_file, header=None, names=column_names)
+
+    settings = {'annotated': {'y_value': 1, 'linestyle': '-', 'label': 'Annotated'},
+                'model_output': {'y_value': 0.995, 'linestyle': '--', 'label': 'Model Output'}}
+    # Closer y_value and different linestyle
+
+    # Plot each class activity
+    for _, row in data.iterrows():
+        start_time = row['start_time']
+        end_time = row['end_time']
+        audio_class = row['class']
+        color = class_colors_dict[audio_class]
+
+        ax.plot([start_time, end_time], [settings['annotated']['y_value'], settings['annotated']['y_value']],
+                color=color,
+                linewidth=10, linestyle=settings['annotated']['linestyle'])
+
+    for _, row in data_annotation.iterrows():
+        start_time = row['start_time']
+        end_time = row['end_time']
+        audio_class = row['class']
+        color = class_colors_dict[audio_class]
+
+        ax.plot([start_time, end_time], [settings['model_output']['y_value'], settings['model_output']['y_value']],
+                color=color,
+                linewidth=10, linestyle=settings['model_output']['linestyle'])
+
+        # Create legends
+    class_legend = [mlines.Line2D([], [], color=color, label=audio_class) for audio_class, color in
+                    class_colors_dict.items()]
+
+    # data_legend = [mlines.Line2D([], [], color='black', linestyle=settings[data_type]['linestyle'],
+    #                                 label=settings[data_type]['label']) for data_type in settings]
+
+    # Add legends to the plot
+    first_legend = ax.legend(handles=class_legend, title="Classes", loc='upper left')
+    ax.add_artist(first_legend)
+    # ax.legend(handles=data_legend, title="Data Type", loc='upper right')
+
+    ax.set_yticks([])  # Hide Y axis
+    ax.set_xlabel('Time (s)')
+    ax.set_title('Audio Class Activity Over Time')
+    ax.set_ylim(0.98, 1.02)
+
+    plt.tight_layout()
+    plt.savefig("ActivityCNN14.png")
+    plt.show()
+########################################################################################
+# Mikhail's code end
+########################################################################################
+
+
+def main():
 
     np.random.seed(1900)
 
@@ -180,14 +327,23 @@ if __name__ == '__main__':
         pretrained_checkpoint_path=config.pretrained_checkpoint_path
     )
 
+    plot = False
+    if plot:
+
+        plot_loader = load_plot_data()
+        evaluate(model, plot_loader)
+        predict_time_stamps(model, plot_loader, check_time_stamp_folder)
+
+        plot_sound_events()
+        sys.exit()
+        
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
-    # PROBLEM
-    # MODEL OUTPUTS LABELS FOR THE ENTIRE DATASET, NOT THE TIME SEGMENTS (256)
-    # THAT IT IS SUPPOSED TO, THIS IS WHY TRAINING DOESN'T WORK 
     #model.train()
     #train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
     
-    model.eval()
     evaluate(model, test_loader)
+
+if __name__ == '__main__':
+    main()
