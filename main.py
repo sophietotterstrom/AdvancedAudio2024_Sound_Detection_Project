@@ -5,6 +5,7 @@ Modified from https://github.com/mulimani/Sound-Event-Detection
 """
 
 import sys
+import os
 
 import torch
 from torch.utils.data import DataLoader
@@ -118,6 +119,9 @@ def load_plot_data():
 ################################ MODEL FUNCTS ################################
 ##############################################################################
 def train(model, train_loader, epochs, check_point):
+
+    model.train()
+
     step = 0
     model.to(device)
 
@@ -137,7 +141,7 @@ def train(model, train_loader, epochs, check_point):
             target = target.to(device).float()
 
             # fetch predictions
-            preds = torch.sigmoid(model(mel)) # NOTE before: model(mel)
+            preds = model(mel) # NOTE sigmoid?
 
             loss = criteria(preds, target)
             sum_loss += loss.item()
@@ -166,7 +170,8 @@ def evaluate(model, test_loader):
 
     for batch_idx, (mel, target) in enumerate(test_loader):
         # unpack batch and transfer to device
-        mel, target = mel.to(device), target.to(device).float()
+        mel = mel.to(device)
+        target = target.to(device).float()
 
         preds = model(mel)
         
@@ -309,9 +314,15 @@ def plot_sound_events():
 
 
 def main():
+    ############# "CLI" ARGS #############
+    pretrained = True
+    resume_training = False
+    plot = False
+    #######################################
 
     np.random.seed(1900)
 
+    # initiate the model
     model = Transfer_Cnn14_DecisionLevelMax(
         sample_rate=config.sr, 
         window_size=config.win_len, 
@@ -323,11 +334,38 @@ def main():
         freeze_base=False
     )
     model = model.to(device)
-    model.load_from_pretrain(
-        pretrained_checkpoint_path=config.pretrained_checkpoint_path
-    )
 
-    plot = False
+    # fetch training and test dataloaders
+    train_loader, test_loader = load_data()
+
+    # either load pretrained or from scratch
+    if pretrained:
+        model.load_from_pretrain(
+            pretrained_checkpoint_path=config.pretrained_checkpoint_path
+        )
+    else:
+        if resume_training:
+            resume_path = 'cnn14_scratch/checkpoint_base.pth'
+            model.load_state_dict(torch.load(resume_path))
+        
+        train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
+
+        # save resulting model
+        save_path = 'cnn14_scratch'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        torch.save(
+            model.state_dict(),
+            os.path.join(save_path, 'checkpoint_base' + '.pth')
+        )
+
+    # finally evaluate the model
+    evaluate(model, test_loader)
+
+
+    ########################################
+    # If we want to plot some of the results 
+    ########################################
     if plot:
         plot_loader = load_plot_data()
         evaluate(model, plot_loader)
@@ -335,14 +373,6 @@ def main():
 
         plot_sound_events()
         sys.exit()
-        
-    # fetch training and test dataloaders
-    train_loader, test_loader = load_data()
-
-    #model.train()
-    #train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
-    
-    evaluate(model, test_loader)
 
 if __name__ == '__main__':
     main()

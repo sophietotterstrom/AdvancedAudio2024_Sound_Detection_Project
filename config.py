@@ -28,8 +28,8 @@ nb_channels = 1
 # Dataset params
 #################################
 development_dir = '../dataset/SED_2017_street/TUT-sound-events-2017-development/'
-#evaluation_dir = '../dataset/SED_2017_street/TUT-sound-events-2017-evaluation/'
-evaluation_dir = '../dataset/MyEvaluationSet/'
+evaluation_dir = '../dataset/SED_2017_street/TUT-sound-events-2017-evaluation/'
+#evaluation_dir = '../dataset/MyEvaluationSet/'
 num_classes = 6
 
 #################################
@@ -39,7 +39,7 @@ num_classes = 6
 pretrained_checkpoint_path = '../Cnn14_DecisionLevelMax_mAP=0.385.pth'
 
 lr = 0.0001         # learning rate for training
-epochs = 100        # total number of training epochs
+epochs = 1        # total number of training epochs
 batch_size = 32     # mini bath-size
 num_workers = 0     # numbers parallel workers to use
 check_point = 50    # check point
