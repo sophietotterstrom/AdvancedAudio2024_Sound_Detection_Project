@@ -98,10 +98,11 @@ def train(model, train_loader, epochs, check_point):
             optimizer.zero_grad()
 
             # unpack batch and transfer to device
-            mel, target = mel.to(device), target.to(device).float()
+            mel = mel.to(device)
+            target = target.to(device).float()
 
             # fetch predictions
-            preds = model(mel)
+            preds = torch.sigmoid(model(mel)) # NOTE before: model(mel)
 
             loss = criteria(preds, target)
             sum_loss += loss.item()
@@ -135,9 +136,10 @@ def evaluate(model, test_loader):
 
         # add non-linearity to the predictions
         preds = torch.sigmoid(model(mel))
-
+        
         # append predictions and targets
-        preds_list.extend(preds.cpu().detach().numpy()) #preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
+        preds_list.extend(preds.cpu().detach().numpy())
+        #preds_list.extend(preds.view(-1, preds.size(2)).cpu().detach().numpy())
         target_list.extend(target.view(-1, target.size(2)).cpu().detach().numpy())
 
     # display evaluation metrics
@@ -181,8 +183,11 @@ if __name__ == '__main__':
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
 
-    # model.train()
-    # train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
+    # PROBLEM
+    # MODEL OUTPUTS LABELS FOR THE ENTIRE DATASET, NOT THE TIME SEGMENTS (256)
+    # THAT IT IS SUPPOSED TO, THIS IS WHY TRAINING DOESN'T WORK 
+    #model.train()
+    #train(model, train_loader, epochs=config.epochs, check_point=config.check_point)
     
     model.eval()
     evaluate(model, test_loader)
