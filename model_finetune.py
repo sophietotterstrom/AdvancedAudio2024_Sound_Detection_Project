@@ -76,12 +76,12 @@ class Transfer_Cnn14_DecisionLevelMax(Module):
         # 3. load the new state dict
         self.base.load_state_dict(model_dict)
 
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input):
         """
         Input: (batch_size, data_length)
         """
 
-        output_dict = self.base(input, mixup_lambda)
+        output_dict = self.base(input)
 
         framewise = output_dict['framewise_output']
         clipwise = output_dict['clipwise_output']
@@ -157,12 +157,12 @@ class Transfer_Cnn14(Module):
         # 3. load the new state dict
         self.base.load_state_dict(model_dict)
 
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input):
         """
         Input: (batch_size, data_length)
         """
 
-        output_dict = self.base(input, mixup_lambda)
+        output_dict = self.base(input)
         embedding = output_dict['embedding']
 
         clipwise_output = self.fc_transfer(embedding)

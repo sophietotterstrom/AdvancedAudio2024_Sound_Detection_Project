@@ -329,7 +329,6 @@ def main():
 
     plot = False
     if plot:
-
         plot_loader = load_plot_data()
         evaluate(model, plot_loader)
         predict_time_stamps(model, plot_loader, check_time_stamp_folder)

@@ -16,7 +16,7 @@ from torchlibrosa.augmentation import SpecAugmentation
 
 import numpy as np
 
-from utils import do_mixup, interpolate, pad_framewise_output
+from utils import interpolate, pad_framewise_output
 import config
 
 
@@ -128,7 +128,7 @@ class Cnn14(Module):
         init_layer(self.fc1)
         init_layer(self.fc_audioset)
 
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input):
         """
         Input: (batch_size, data_length)"""
 
@@ -252,7 +252,7 @@ class Cnn14_DecisionLevelMax(Module):
         init_layer(self.fc1)
         init_layer(self.fc_audioset)
  
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input):
         """
         Input: (batch_size, data_length)"""
 
@@ -271,10 +271,6 @@ class Cnn14_DecisionLevelMax(Module):
         
         if self.training:
             x = self.spec_augmenter(x)
-
-        # Mixup on spectrogram
-        if self.training and mixup_lambda is not None:
-            x = do_mixup(x, mixup_lambda)
 
         x = self.conv_block1(x, pool_size=(2, 2), pool_type='avg')
         x = dropout(x, p=0.2, training=self.training)
