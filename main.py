@@ -10,7 +10,7 @@ import os
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import BCEWithLogitsLoss
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import numpy as np
 
