@@ -263,7 +263,7 @@ def plot_sound_events():
     data_annotation = pd.read_csv(time_stamp_label_file, header=None, names=column_names)
 
     settings = {'annotated': {'y_value': 1, 'linestyle': '-', 'label': 'Annotated'},
-                'model_output': {'y_value': 0.995, 'linestyle': '--', 'label': 'Model Output'}}
+                'model_output': {'y_value': 0.995, 'linestyle': '-', 'label': 'Model Output'}}
     # Closer y_value and different linestyle
 
     # Plot each class activity
@@ -283,7 +283,10 @@ def plot_sound_events():
         audio_class = row['class']
         color = class_colors_dict[audio_class]
 
-        ax.plot([start_time, end_time], [settings['model_output']['y_value'], settings['model_output']['y_value']],
+        print(start_time,end_time)
+
+        ax.plot([start_time, end_time], [settings['model_output']['y_value'],
+                                         settings['model_output']['y_value']],
                 color=color,
                 linewidth=10, linestyle=settings['model_output']['linestyle'])
 
@@ -307,6 +310,7 @@ def plot_sound_events():
     plt.tight_layout()
     plt.savefig("ActivityCNN14.png")
     plt.show()
+      
 ########################################################################################
 # Mikhail's code end
 ########################################################################################
@@ -316,7 +320,7 @@ def main():
     ############# "CLI" ARGS #############
     pretrained = True
     resume_training = False
-    plot = True
+    plot = False
     #######################################
 
     np.random.seed(1900)
@@ -333,6 +337,17 @@ def main():
         freeze_base=False
     )
     model = model.to(device)
+
+    ########################################
+    # If we want to plot some of the results 
+    ########################################
+    if plot:
+        plot_loader = load_plot_data()
+        evaluate(model, plot_loader)
+        #predict_time_stamps(model, plot_loader, check_time_stamp_folder)
+
+        plot_sound_events()
+        sys.exit()
 
     # fetch training and test dataloaders
     train_loader, test_loader = load_data()
@@ -361,17 +376,6 @@ def main():
     # finally evaluate the model
     evaluate(model, test_loader)
 
-
-    ########################################
-    # If we want to plot some of the results 
-    ########################################
-    if plot:
-        plot_loader = load_plot_data()
-        evaluate(model, plot_loader)
-        predict_time_stamps(model, plot_loader, check_time_stamp_folder)
-
-        plot_sound_events()
-        sys.exit()
 
 if __name__ == '__main__':
     main()
